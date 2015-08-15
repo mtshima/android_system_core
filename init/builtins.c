@@ -726,9 +726,8 @@ int do_powerctl(int nargs, char **args)
     char command[PROP_VALUE_MAX];
     int res;
     int len = 0;
-    unsigned int cmd = 0;
-    const char *reboot_target = "";
-    void (*callback_on_ro_remount)(const struct mntent*) = NULL;
+    int cmd = 0;
+    char *reboot_target;
 
     res = expand_props(command, args[1], sizeof(command));
     if (res) {
@@ -748,15 +747,10 @@ int do_powerctl(int nargs, char **args)
     }
 
     if (command[len] == ',') {
-        if (cmd == ANDROID_RB_POWEROFF &&
-            !strcmp(&command[len + 1], "userrequested")) {
-            // The shutdown reason is PowerManager.SHUTDOWN_USER_REQUESTED.
-            // Run fsck once the file system is remounted in read-only mode.
-            callback_on_ro_remount = unmount_and_fsck;
-        } else if (cmd == ANDROID_RB_RESTART2) {
-            reboot_target = &command[len + 1];
-        }
-    } else if (command[len] != '\0') {
+        reboot_target = &command[len + 1];
+    } else if (command[len] == '\0') {
+        reboot_target = "";
+    } else {
         ERROR("powerctl: unrecognized reboot target '%s'\n", &command[len]);
         return -EINVAL;
     }
